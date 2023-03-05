@@ -37,3 +37,4 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.magiclink
   - pymdownx.details
+  - attr_list

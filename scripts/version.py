@@ -12,9 +12,7 @@ def show_version_string() -> None:
     version_regex = re.compile(
         r"(^_*?version_*?\s*=\s*['\"])(\d+\.\d+\.\d+[^\"]*)", re.M
     )
-    about_file = pathlib.Path(__file__).parent.parent.joinpath(
-        "src/genid/__about__.py"
-    )
+    about_file = pathlib.Path(__file__).parent.parent.joinpath("src/genid/__about__.py")
     try:
         about = about_file.read_text()
     except FileNotFoundError as exc:

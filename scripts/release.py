@@ -19,9 +19,7 @@ def update_version_string(new_version: str) -> None:
     version_regex = re.compile(
         r"(^_*?version_*?\s*=\s*['\"])(\d+\.\d+\.\d+[^\"]*)", re.M
     )
-    about = pathlib.Path(__file__).parent.parent.joinpath(
-        "src/genid/__about__.py"
-    )
+    about = pathlib.Path(__file__).parent.parent.joinpath("src/genid/__about__.py")
     with about.open("r+") as about_file:
         content = about_file.read()
         about_file.seek(0)

@@ -1,5 +1,4 @@
 import os
-import typing as t
 from pathlib import Path
 from shlex import quote
 from shutil import rmtree
@@ -42,21 +41,6 @@ def clean(
 
 
 @task
-def requirements(c: Context, with_hashes: bool = False, dry_run: bool = False):
-    """Generate requirementx.txt (required to build docker image)"""
-    cmd = (
-        f"{VENV_PYTHON} -m piptools compile"
-        " --no-header"
-        " --output-file=requirements.txt"
-        " --resolver=backtracking"
-    )
-    if with_hashes:
-        cmd += " --generate-hashes"
-    cmd += " pyproject.toml"
-    run_or_display(c, cmd, dry_run=dry_run)
-
-
-@task
 def build(c: Context, docs: bool = False, dry_run: bool = False):
     """Build sdist and wheel, and optionally build documentation."""
     python_build_cmd = f"{VENV_PYTHON} -m build --no-isolation --outdir dist ."
@@ -66,24 +50,6 @@ def build(c: Context, docs: bool = False, dry_run: bool = False):
         if not dry_run:
             rmtree("dist/documentation", ignore_errors=True)
         run_or_display(c, docs_build_cmd, dry_run=dry_run)
-
-
-@task
-def wheelhouse(
-    c: Context, clean: bool = False, compress: bool = False, dry_run: bool = False
-):
-    """Build wheelhouse for the project"""
-    wheelhouse_cmd = f"{VENV_PYTHON} -m pip wheel . -w dist/wheelhouse"
-    compress_cmd = "tar -czf dist/wheelhouse.tar.gz -C dist wheelhouse"
-    if not dry_run:
-        Path("dist").mkdir(exist_ok=True)
-    if clean and not dry_run:
-        rmtree("dist/wheelhouse", ignore_errors=True)
-    run_or_display(c, wheelhouse_cmd, dry_run=dry_run)
-    if not dry_run:
-        rmtree("build", ignore_errors=True)
-    if compress:
-        run_or_display(c, compress_cmd, dry_run=dry_run)
 
 
 @task
@@ -154,61 +120,9 @@ def lint(c: Context, dry_run: bool = False):
 
 
 @task
-def docker(
-    c: Context,
-    platforms: str = "linux/amd64",
-    name: str = "genid",
-    tag: str = "latest",
-    registry: t.Optional[str] = None,
-    base_image: t.Optional[str] = None,
-    build_image: t.Optional[str] = None,
-    push: bool = False,
-    load: bool = False,
-    output: t.Optional[str] = None,
-    provenance: bool = False,
-    pip_config: str = "~/.config/pip/pip.conf",
-    dry_run: bool = False,
-):
-    """Build cross-platform docker image for the project"""
-    image = f"{name}:{tag}"
-    if registry:
-        while registry.endswith("/"):
-            registry = registry[:-1]
-        image = f"{registry}/{image}"
-    build_args: t.Dict[str, str] = {}
-    if base_image:
-        build_args["BASE_IMAGE"] = base_image
-    if build_image:
-        build_args["BUILD_IMAGE"] = build_image
-    # Create an empty pip config if user does not have a pip config yet
-    # Use strict permissions since pip config can hold tokens
-    pip_configfile = Path(pip_config).expanduser()
-    if not pip_configfile.exists():
-        if not pip_configfile.parent.exists():
-            pip_configfile.parent.mkdir(parents=True, mode=600)
-        pip_configfile.touch(mode=600)
-    pip_config = pip_configfile.as_posix()
-    # buildx command
-    cmd = f"docker buildx build --secret id=pip-config,src={pip_config} -t {image} -f Dockerfile"
-    if not provenance:
-        cmd += " --provenance=false"
-    if push:
-        cmd += " --push"
-    elif load:
-        cmd += " --load"
-    elif output:
-        cmd += f" --output=type=local,dest={output}"
-    cmd += f" --platform='{platforms}'"
-    for key, value in build_args.items():
-        cmd += f" --build-arg {key}={value}"
-    cmd += " ."
-    run_or_display(c, cmd, dry_run=dry_run)
-
-
-@task
 def pre_push(c: Context):
     """Ensure checks performed in CI will not fail before pushing to remote"""
     format(c, check=True)
     lint(c)
     check(c, include_tests=True)
-    test(c)
+    test(c, e2e=True)
