@@ -1,0 +1,89 @@
+name: Continuous Delivery
+
+on:
+  push:
+    tags:
+      - "*"
+
+# Sets permissions of the GITHUB_TOKEN
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  packages: write
+
+jobs:
+  publish_release:
+    name: Publish Github release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --user invoke
+          python scripts/install.py -e build,docs
+
+      - name: Build package
+        run: |
+          python -m invoke build --docs
+          cd dist/
+          zip -r documentation.zip documentation
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: "dist/documentation"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+
+      - name: Generate release notes and use it as a body of new release
+        shell: bash
+        run: |
+          RELEASE_NOTES=$(python scripts/notes.py)
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$RELEASE_NOTES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Upload wheel to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*.whl
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+          prerelease: ${{ contains(github.ref, '-rc.') }}
+          body: |
+            ${{ env.RELEASE_NOTES }}
+
+      - name: Upload sdist to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/*.tar.gz
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+          prerelease: ${{ contains(github.ref, '-rc.') }}
+
+      - name: Upload documentation to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: dist/documentation.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
+          prerelease: ${{ contains(github.ref, '-rc.') }}
