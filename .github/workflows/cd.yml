@@ -87,3 +87,8 @@ jobs:
           overwrite: true
           file_glob: true
           prerelease: ${{ contains(github.ref, '-rc.') }}
+
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
