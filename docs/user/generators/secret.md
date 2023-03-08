@@ -17,11 +17,12 @@ from genid import SecretIDGenerator
 
 # Create a new generator with default length (16)
 gen = SecretIDGenerator()
+assert len(gen) == 16
 # Create a new generator with custom length
 gen = SecretIDGenerator(21)
 # Generate and check that new ID length is 21 as expected
 new_id = gen.new()
-assert len() == 21
+assert len(new_id) == 21
 ```
 
 - Using the `generator` factory:
@@ -35,5 +36,5 @@ gen = generator(Kind.SECRET, length=21)
 gen = generator("secret", length=21)
 # Generate and check that new ID length is 21 as expected
 new_id = gen.new()
-assert len() == 21
+assert len(new_id) == 21
 ```

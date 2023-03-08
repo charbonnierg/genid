@@ -54,7 +54,7 @@ from genid import generator
 # Create an ObjectID generator
 generator = generator("objectid")
 # Use the generator in order to initialize use case
-use_case = MyUseCase(generator)
+use_case = MyUseCase(id_generator=generator)
 # Now it's possible to execute the use case
 new_entity = use_case.create_entity()
 # Entity ID is a valid ObjectID (example: "6404ec25f1421b11d772e6fb")
